@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.cow.dao.AiKefuDao">
+
+    <!--通过ID查询-->
+    <select id="selectById" resultType="AiKefu" parameterType="Integer">
+        select ai_id, ai_question, ai_answer, status
+        from ai_kefu
+        where ai_id = #{aiId};
+    </select>
+
+    <!--查询所有-->
+    <select id="selectAll" resultType="AiKefu">
+        select ai_id, ai_question, ai_answer, status
+        from ai_kefu;
+    </select>
+
+    <!--插入一条数据-->
+    <insert id="insertData" parameterType="AiKefu">
+        insert into ai_kefu (ai_question, ai_answer, status)
+        values (#{aiQuestion}, #{aiAnswer}, #{status});
+    </insert>
+
+    <!--通过ID更新-->
+    <update id="updateById" parameterType="AiKefu">
+        update ai_kefu
+        <set>
+            <if test="aiQuestion != null">
+                ai_question = #{aiQuestion},
+            </if>
+            <if test="aiAnswer != null">
+                ai_answer = #{aiAnswer},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+        </set>
+        where ai_id=#{aiId};
+    </update>
+
+    <!--通过ID删除-->
+    <delete id="deleteById" parameterType="Integer">
+        delete
+        from ai_kefu
+        where ai_id = #{aiId};
+    </delete>
+
+</mapper>

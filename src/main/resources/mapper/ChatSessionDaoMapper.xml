@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 绑定你的 DAO 接口 -->
+<mapper namespace="com.cow.dao.ChatSessionDao">
+
+    <!-- 查询会话列表 + 关联 user 表获取用户名、头像 -->
+    <select id="listSession" resultType="com.cow.entity.ChatSession">
+        SELECT
+            cs.id,
+            cs.user_id AS userId,
+            cs.last_msg AS lastMsg,
+            cs.last_msg_time AS lastMsgTime,
+            cs.create_time AS createTime,
+            cs.status,
+            u.user_name AS userName,
+            u.avatar_url AS avatarUrl
+        FROM chat_session cs
+                 LEFT JOIN user u ON cs.user_id = u.user_id
+        ORDER BY cs.last_msg_time DESC
+    </select>
+
+</mapper>

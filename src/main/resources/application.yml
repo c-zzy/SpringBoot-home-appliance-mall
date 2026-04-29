@@ -1,0 +1,101 @@
+server:
+  port: 9999
+spring:
+  application:
+    name: BreadRollMall-Server
+  http:
+    encoding:
+      charset: utf-8
+      force: true
+  resources:
+    static-locations: classpath:/static/
+
+  # MySQL 配置 ✅ 已修复
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3307/jd_mall?useSSL=false&useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: 103520Cxr
+
+  # Redis 配置
+  redis:
+    database: 0
+    host: 127.0.0.1
+    port: 6379
+    password:
+    jedis:
+      pool:
+        min-idle: 8
+        max-idle: 500
+        max-active: 2000
+        max-wait: 10000
+    timeout: 10000
+
+  # JSON配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  profiles:
+    include: redis,mail,jdbc
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 7MB
+  jpa:
+    open-in-view: false
+
+  # 邮箱配置（不用管）
+  mail:
+    host: smtp.163.com
+    username: bDoly3etf13m443PORHr9Xs2rcfgmw6UlfU6Di9E810Uh8Tq8Vey5NROPTzkoF0OCcqkuilshPnZ8265CdKvqA==
+    password: Aid4dayAgpvTHTlBJxTcyw7BKLKPR1vdMX/k4LNCkJ+e1Lu1tPQu2YTdYoBas5ePY9UeCnpeOjibEiOBGh46rQ==
+    properties.mail.smtp.port: 994
+    nickname: xxxx
+    properties.mail.smtp.starttls.enable: true
+    properties.mail.smtp.starttls.required: true
+    properties.mail.smtp.ssl.enable: true
+    default-encoding: utf-8
+
+# Mybatis-Plus
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  type-aliases-package: com.cow.entity
+
+# Sa-token
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  activity-timeout: -1
+  is-concurrent: false
+  is-share: false
+  token-style: uuid
+  is-log: false
+  is-print: false
+
+admin:
+  email: admin@qq.com
+  userName: 超级管理员
+  password: admin@qq.com
+
+# 短信（不用管）
+sms:
+  aliyun:
+    accessKeyID: Pi0XBxmVDiBcc4dAPWFTihkNSuoAPKj3MIEyGhk2wgDuN7Q2es+PL/skEU2SBhOzhnANYqjg+BmCkDg4Yb2xEw==
+    accessKeySecret: 13Lt+OVG7CBiLshYIZ0+N/8iwqXxRCheIJlj/tZfKvq3R2SfHCJ4Mdduo4xsklCSWfBEyqjveee7zqAwTnyK+g==
+    domain: dysmsapi.aliyuncs.com
+    regionId: cn-hangzhou
+    templateCode: SMS_205882311
+    signName: singure
+
+# OSS（不用管）
+oss:
+  bucketName: code51cn
+  accessKeyId: LTAI5t8Lc5gJq3F4QsxbwJCv
+  accessKeySecret: so8zRPEXg6KuBoBMPRpFLsWl7sgPDJ
+  endpoint: oss-cn-hangzhou.aliyuncs.com
+  bucket: https://spring-oss.oss-cn-beijing.aliyuncs.com
+  fileHost: https://code51cn.oss-cn-hangzhou.aliyuncs.com/
