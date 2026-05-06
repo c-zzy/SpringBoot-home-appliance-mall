@@ -5,6 +5,7 @@ import com.cow.entity.ChatMessage;
 import com.cow.entity.ChatSession;
 import com.cow.service.AiKefuService;
 import com.cow.service.ChatSessionService;
+import com.cow.util.general.WordFilter; // 【新增】導入敏感詞過濾工具
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class KefuController {
     @Autowired
     private ChatSessionService chatService;
 
-    // ================== AI 客服相关（原有代码不动） ==================
+    // ================== AI 客服相關 ==================
     @PostMapping("/ai/list")
     public Map<String, Object> aiList() {
         Map<String, Object> map = new HashMap<>();
@@ -121,6 +122,12 @@ public class KefuController {
         Long sessionId = Long.valueOf(param.get("sessionId").toString());
         Integer senderType = (Integer) param.get("senderType");
         String content = param.get("content").toString();
+
+        // 【整合修改】：如果是使用者發送的訊息(senderType == 1)，自動將敏感詞替換為 *
+        if (senderType != null && senderType == 1) {
+            content = WordFilter.replaceWords(content);
+        }
+
         chatService.sendMessage(sessionId, senderType, content);
         Map<String, Object> map = new HashMap<>();
         map.put("code", 200);
@@ -128,7 +135,6 @@ public class KefuController {
         return map;
     }
 
-    // ===================== 新增：自动获取/创建用户会话 =====================
     @PostMapping("/chat/getOrCreateSession")
     public Map<String, Object> getOrCreateSession(@RequestBody Map<String, Object> param) {
         Map<String, Object> map = new HashMap<>();

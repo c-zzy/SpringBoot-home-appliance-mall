@@ -5,6 +5,7 @@ import com.cow.entity.ProductReview;
 import com.cow.service.OrderService;
 import com.cow.service.ProductReviewService;
 import com.cow.util.general.CommonResult;
+import com.cow.util.general.WordFilter; // 【新增】導入敏感詞過濾工具
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
  * @email QQ550080747
  * @description 商品评价 业务类
  */
@@ -37,6 +37,19 @@ public class ProductReviewController {
      */
     @RequestMapping(value = "/productReview/add")
     public CommonResult addProductReview(ProductReview productReview) {
+
+        // 【整合修改】：攔截包含敏感詞的評價
+        String originalContent = productReview.getProductReview();
+        if (originalContent != null && !originalContent.trim().isEmpty()) {
+            // 過濾一次文字
+            String filteredContent = WordFilter.replaceWords(originalContent);
+            // 如果原文字與過濾後不相等，代表觸發了敏感詞替換
+            if (!originalContent.equals(filteredContent)) {
+                return CommonResult.error("您的评价包含违规敏感词，请修改后再提交！");
+            }
+        }
+
+        // 原本的保存邏輯
         if (productReviewService.insertData(productReview)) {
             Integer orderId = orderService.selectIdByKey(productReview.getOrderNo());
             Order order = new Order();
@@ -64,7 +77,6 @@ public class ProductReviewController {
         return CommonResult.error("商品评论删除失败");
     }
 
-    // ====================== 【你要的：根据订单号删除评价】 ======================
     @RequestMapping(value = "/productReview/delete")
     public CommonResult deleteByOrderNo(@RequestParam String orderNo) {
         if (orderNo == null || orderNo.trim().isEmpty()) {
@@ -120,7 +132,6 @@ public class ProductReviewController {
         return CommonResult.error("商品评论查询失败");
     }
 
-    // ====================== 【新增】根据订单号查询评价 ======================
     @RequestMapping(value = "/productReview/getByOrderNo")
     public CommonResult getByOrderNo(@RequestParam String orderNo) {
         ProductReview review = productReviewService.getByOrderNo(orderNo);
