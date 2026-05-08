@@ -348,4 +348,29 @@ public class ProductController {
         return CommonResult.success("推荐成功", products);
     }
 
+    // ================== 【新增】：按价格区间查询 ==================
+    @RequestMapping(value = "/product/findAllByPrice")
+    public CommonResult findAllByPrice(@RequestParam(required = false) Double minPrice, @RequestParam(required = false) Double maxPrice) {
+        List<Product> products = productService.selectAllSale(); // 只查正在售卖的商品
+        if (products != null) {
+            java.util.List<Product> result = new java.util.ArrayList<>();
+            for (Product p : products) {
+                if (p.getOutPrice() == null) continue;
+                double price = 0.0;
+                try {
+                    // 安全解析价格
+                    price = Double.parseDouble(p.getOutPrice().toString());
+                } catch (Exception e) {
+                    continue;
+                }
+                // 价格区间过滤
+                if (minPrice != null && price < minPrice) continue;
+                if (maxPrice != null && price > maxPrice) continue;
+
+                result.add(p);
+            }
+            return CommonResult.success("价格区间查询成功", result);
+        }
+        return CommonResult.error("查询失败");
+    }
 }
