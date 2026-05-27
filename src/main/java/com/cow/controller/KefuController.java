@@ -5,7 +5,7 @@ import com.cow.entity.ChatMessage;
 import com.cow.entity.ChatSession;
 import com.cow.service.AiKefuService;
 import com.cow.service.ChatSessionService;
-import com.cow.util.general.WordFilter; // 【新增】導入敏感詞過濾工具
+import com.cow.util.general.WordFilter; // 導入敏感詞過濾工具
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -123,12 +123,19 @@ public class KefuController {
         Integer senderType = (Integer) param.get("senderType");
         String content = param.get("content").toString();
 
-        // 【整合修改】：如果是使用者發送的訊息(senderType == 1)，自動將敏感詞替換為 *
+        // 整合修改：如果是使用者發送的訊息(senderType == 1)，自動將敏感詞替換為 *
         if (senderType != null && senderType == 1) {
             content = WordFilter.replaceWords(content);
         }
 
+        // 1. 发送并保存当前用户发送的消息
         chatService.sendMessage(sessionId, senderType, content);
+
+        // 2. 如果是用户发送的消息(senderType == 1)，进一步匹配 AI 自动回复
+        if (senderType != null && senderType == 1) {
+            tryTriggerAiReply(sessionId, content);
+        }
+
         Map<String, Object> map = new HashMap<>();
         map.put("code", 200);
         map.put("message", "发送成功");
@@ -143,5 +150,31 @@ public class KefuController {
         map.put("code", 200);
         map.put("data", sessionId);
         return map;
+    }
+
+    // ================== AI 自动回复分配 ==================
+    private void tryTriggerAiReply(Long sessionId, String userContent) {
+        String transferTip = "抱歉，这个问题我暂时不会，将转人工客服~";
+
+        // 从知识库模糊匹配 AI 回复
+        String aiAnswer = null;
+        List<AiKefu> activeAiRules = aiKefuService.selectAll();
+        if (activeAiRules != null) {
+            for (AiKefu rule : activeAiRules) {
+                if (rule.getStatus() != null && rule.getStatus() && userContent.contains(rule.getAiQuestion())) {
+                    aiAnswer = rule.getAiAnswer();
+                    break;
+                }
+            }
+        }
+
+        // 判断是否有匹配结果
+        if (aiAnswer != null && !aiAnswer.trim().isEmpty()) {
+            // 匹配到了正常业务问题的自动回复，由 AI (senderType=0) 发出
+            chatService.sendMessage(sessionId, 0, aiAnswer);
+        } else {
+            // 没匹配到回复，直接下发给底層核心，底層會自動判定半小時內是否重復並阻斷入庫
+            chatService.sendMessage(sessionId, 0, transferTip);
+        }
     }
 }
