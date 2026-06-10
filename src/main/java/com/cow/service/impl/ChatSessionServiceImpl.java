@@ -44,26 +44,19 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public void sendMessage(Long sessionId, Integer senderType, String content) {
-
-        // 【核心物理阻斷防線】：如果消息是系統或 AI 發出的（senderType == 0），並且內容中包含「转人工」核心詞
-        // 使用 content.contains() 模糊匹配，可以完美杜絕因前端傳輸帶有看不見的換行符或空格導致 equals() 失效的問題
+        // 频控：如果是系统/AI(senderType=0)发出的“转人工”提示，进行防重复拦截
         if (senderType != null && senderType == 0 && content != null && content.contains("将转人工客服")) {
             String redisLockKey = "lock:ai_kefu:transfer:session:" + sessionId;
-
-            // 使用 JVM intern 鎖對當前會話強行互斥排隊
             synchronized (String.valueOf(sessionId).intern()) {
-                Boolean hasLock = redisTemplate.hasKey(redisLockKey);
-                if (hasLock != null && hasLock) {
-                    // 半小時內發過一次，底層直接攔截拋棄，既不寫數據庫，也不會被前端輪詢抓到，死循環瞬間瓦解！
-                    System.out.println("【核心底層絕殺】會話 " + sessionId + " 觸發死循環安全機制，本次拒絕寫入數據庫！");
-                    return;
+                if (Boolean.TRUE.equals(redisTemplate.hasKey(redisLockKey))) {
+                    System.out.println("【底层物理拦截】会话 " + sessionId + " 已存在转人工锁，拒绝重写入库。");
+                    return; // 直接丢弃，不再入库，前端轮询也查不到数据，死循环瓦解
                 }
-                // 半小時內第一次觸發，立刻搶先把 Redis 鎖焊死，過期時間設置為 30 分鐘
                 redisTemplate.opsForValue().set(redisLockKey, "locked", 30, TimeUnit.MINUTES);
             }
         }
 
-        // ================= 下方為你原本完好無損的物理入庫邏輯 =================
+        // 正常入库逻辑
         ChatMessage msg = new ChatMessage();
         msg.setSessionId(sessionId);
         msg.setSenderType(senderType);

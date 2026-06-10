@@ -7,6 +7,7 @@ import com.cow.service.AiKefuService;
 import com.cow.service.ChatSessionService;
 import com.cow.util.general.WordFilter; // 導入敏感詞過濾工具
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate; // 導入 Redis 模板
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -22,6 +23,9 @@ public class KefuController {
 
     @Autowired
     private ChatSessionService chatService;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate; // 注入 Redis 模板
 
     // ================== AI 客服相關 ==================
     @PostMapping("/ai/list")
@@ -123,6 +127,15 @@ public class KefuController {
         Integer senderType = (Integer) param.get("senderType");
         String content = param.get("content").toString();
 
+        // 【终极第一重拦截】：如果接收到的普通消息内容里本身就带有“转人工”字样，说明是前端刷出来的幽灵重放请求！
+        // 这一步能从最上游拦截住前端错误传递 senderType 的大 Bug，保护底层 Service 不被无限透支
+        if (content != null && content.contains("将转人工客服")) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("code", 200);
+            map.put("message", "幽灵请求，静默过滤");
+            return map;
+        }
+
         // 整合修改：如果是使用者發送的訊息(senderType == 1)，自動將敏感詞替換為 *
         if (senderType != null && senderType == 1) {
             content = WordFilter.replaceWords(content);
@@ -155,6 +168,14 @@ public class KefuController {
     // ================== AI 自动回复分配 ==================
     private void tryTriggerAiReply(Long sessionId, String userContent) {
         String transferTip = "抱歉，这个问题我暂时不会，将转人工客服~";
+        String redisLockKey = "lock:ai_kefu:transfer:session:" + sessionId;
+
+        // 【终极第二重拦截】：在调知识库匹配前，先看看当前会话半小时内有没有锁
+        // 如果半小时内发过转人工，这里直接 return 拦截，保持沉默，杜绝多线程时差穿透
+        Boolean hasHitLock = redisTemplate.hasKey(redisLockKey);
+        if (hasHitLock != null && hasHitLock) {
+            return;
+        }
 
         // 从知识库模糊匹配 AI 回复
         String aiAnswer = null;
@@ -167,14 +188,11 @@ public class KefuController {
                 }
             }
         }
-
-        // 判断是否有匹配结果
+        // 在 KefuController.java 的 tryTriggerAiReply 方法中
         if (aiAnswer != null && !aiAnswer.trim().isEmpty()) {
-            // 匹配到了正常业务问题的自动回复，由 AI (senderType=0) 发出
-            chatService.sendMessage(sessionId, 0, aiAnswer);
+            chatService.sendMessage(sessionId, 0, aiAnswer); // 0代表系统回复
         } else {
-            // 没匹配到回复，直接下发给底層核心，底層會自動判定半小時內是否重復並阻斷入庫
-            chatService.sendMessage(sessionId, 0, transferTip);
+            chatService.sendMessage(sessionId, 0, transferTip); // 0代表系统回复
         }
     }
 }
